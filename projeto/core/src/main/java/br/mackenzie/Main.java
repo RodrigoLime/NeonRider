@@ -5,7 +5,6 @@ import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 
-// A classe principal agora estende 'Game'
 public class Main extends Game {
 
     // Assets globais que todas as telas usarão
@@ -32,13 +31,12 @@ public class Main extends Game {
 
     @Override
     public void render() {
-        // O 'Game' delega o render para a tela atual
         super.render();
     }
 
+    // Libera os assets globais
     @Override
     public void dispose() {
-        // Libera os assets globais
         batch.dispose();
         font.dispose();
         shapeRenderer.dispose();

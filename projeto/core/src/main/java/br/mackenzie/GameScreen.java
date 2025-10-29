@@ -71,11 +71,11 @@ public class GameScreen implements Screen {
 
         // Carrega assets desta tela
         try {
-            motoTexture = new Texture(Gdx.files.internal("moto.png"));
-        } catch (Exception e) { Gdx.app.error("Texture", "Nao foi possivel carregar moto.png", e); }
+            motoTexture = new Texture(Gdx.files.internal("neon_rider_idle.png"));
+        } catch (Exception e) { Gdx.app.error("Texture", "Nao foi possivel carregar neon_rider_idle.png", e); }
 
         try {
-            musica = Gdx.audio.newMusic(Gdx.files.internal("musica.mp3"));
+            musica = Gdx.audio.newMusic(Gdx.files.internal("music.ogg"));
             musica.setLooping(true);
             // USA A CONFIGURAÇÃO DE VOLUME
             musica.setVolume(settings.volume);
