@@ -1,0 +1,226 @@
+package br.mackenzie;
+
+import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Input;
+import com.badlogic.gdx.Screen;
+import com.badlogic.gdx.audio.Music;
+import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.graphics.GL20;
+import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.BitmapFont;
+import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
+import com.badlogic.gdx.math.Rectangle;
+import com.badlogic.gdx.utils.Array;
+import com.badlogic.gdx.utils.TimeUtils;
+
+public class GameScreen implements Screen {
+
+    // Classe interna privada para representar uma nota caindo
+    private static class Note {
+        enum NoteType { LEFT, RIGHT }
+        Rectangle rect;
+        NoteType type;
+        boolean hit = false;
+
+        public Note(float x, float y, NoteType type) {
+            this.rect = new Rectangle(x, y, 50, 20);
+            this.type = type;
+        }
+        public void update(float delta, float speed) {
+            rect.y -= speed * delta;
+        }
+    }
+
+    // Referências globais
+    private final Main game;
+    private final GameSettings settings;
+    private final SpriteBatch batch;
+    private final BitmapFont font;
+    private final ShapeRenderer shapeRenderer;
+
+    // Assets específicos desta tela
+    private Music musica;
+    private Texture motoTexture;
+
+    // Posições
+    private float laneLeftX, laneRightX, laneWidth = 50;
+    private Rectangle hitZoneLeft, hitZoneRight;
+    private float hitZoneY = 100;
+
+    // Lógica do Jogo
+    private Array<Note> notes;
+    private long lastNoteTime;
+    private float noteSpeed = 300.0f;
+    private long spawnInterval; // << VEM DAS CONFIGURAÇÕES
+
+    private String feedback = "Vamos começar!";
+    private Color feedbackColor = Color.WHITE;
+    private int score = 0;
+
+    public GameScreen(final Main game) {
+        // Pega os objetos globais da classe 'main'
+        this.game = game;
+        this.settings = game.settings;
+        this.batch = game.batch;
+        this.font = game.font;
+        this.shapeRenderer = game.shapeRenderer;
+
+        // USA A CONFIGURAÇÃO DE DIFICULDADE
+        this.spawnInterval = settings.difficulty.spawnInterval;
+
+        // Carrega assets desta tela
+        try {
+            motoTexture = new Texture(Gdx.files.internal("moto.png"));
+        } catch (Exception e) { Gdx.app.error("Texture", "Nao foi possivel carregar moto.png", e); }
+
+        try {
+            musica = Gdx.audio.newMusic(Gdx.files.internal("musica.mp3"));
+            musica.setLooping(true);
+            // USA A CONFIGURAÇÃO DE VOLUME
+            musica.setVolume(settings.volume);
+        } catch (Exception e) { Gdx.app.error("Audio", "Nao foi possivel carregar musica.mp3", e); }
+
+        // Configura pistas
+        float screenWidth = Gdx.graphics.getWidth();
+        laneLeftX = screenWidth / 2f - laneWidth * 1.5f;
+        laneRightX = screenWidth / 2f + laneWidth * 0.5f;
+        hitZoneLeft = new Rectangle(laneLeftX, hitZoneY, laneWidth, 20);
+        hitZoneRight = new Rectangle(laneRightX, hitZoneY, laneWidth, 20);
+
+        notes = new Array<>();
+        lastNoteTime = TimeUtils.millis();
+    }
+
+    @Override
+    public void show() {
+        // Toca a música quando a tela aparece
+        if (musica != null) {
+            musica.play();
+        }
+        // Garante que o InputProcessor das telas de menu não está ativo
+        Gdx.input.setInputProcessor(null);
+    }
+
+    private void spawnNote() {
+        // Mantém a lógica de sempre alternar
+        Note.NoteType type = (notes.size % 2 == 0) ? Note.NoteType.LEFT : Note.NoteType.RIGHT;
+        float x = (type == Note.NoteType.LEFT) ? laneLeftX : laneRightX;
+        notes.add(new Note(x, Gdx.graphics.getHeight(), type));
+        lastNoteTime = TimeUtils.millis();
+    }
+
+    private void updateLogic(float delta) {
+        // 1. Spawna notas
+        if (TimeUtils.millis() - lastNoteTime > spawnInterval) {
+            spawnNote();
+        }
+
+        // 2. Movimenta e remove notas
+        for (int i = notes.size - 1; i >= 0; i--) {
+            Note note = notes.get(i);
+            note.update(delta, noteSpeed);
+
+            if (note.rect.y < hitZoneY - note.rect.height && !note.hit) {
+                feedback = "ERROU!";
+                feedbackColor = Color.RED;
+                score -= 5;
+                notes.removeIndex(i);
+            }
+        }
+
+        // 3. Verifica input
+        handleInput();
+
+        // 4. Botão de emergência para sair (ESC)
+        if(Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
+            game.setScreen(new MainMenuScreen(game)); // Volta ao menu
+        }
+    }
+
+    private void handleInput() {
+        // USA AS TECLAS DAS CONFIGURAÇÕES
+        if (Gdx.input.isKeyJustPressed(settings.keyLeft)) {
+            checkHit(Note.NoteType.LEFT, hitZoneLeft);
+        }
+        if (Gdx.input.isKeyJustPressed(settings.keyRight)) {
+            checkHit(Note.NoteType.RIGHT, hitZoneRight);
+        }
+    }
+
+    private void checkHit(Note.NoteType type, Rectangle hitZone) {
+        boolean hitSomething = false;
+        for (int i = notes.size - 1; i >= 0; i--) {
+            Note note = notes.get(i);
+            if (note.type == type && !note.hit) {
+                // Se a nota está colidindo com a zona de acerto
+                if (note.rect.overlaps(hitZone)) {
+                    feedback = "ACERTOU!";
+                    feedbackColor = Color.GREEN;
+                    score += 10;
+                    note.hit = true;
+                    notes.removeIndex(i);
+                    hitSomething = true;
+                    break;
+                }
+            }
+        }
+        if (!hitSomething) {
+            feedback = "Errou a batida!";
+            feedbackColor = Color.GRAY;
+            score -= 2;
+        }
+    }
+
+    @Override
+    public void render(float delta) {
+        updateLogic(delta);
+
+        Gdx.gl.glClearColor(0.1f, 0.1f, 0.2f, 1);
+        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+
+        // Desenha Zonas e Notas (ShapeRenderer)
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+        shapeRenderer.setColor(0, 1, 0, 0.3f); // Verde
+        shapeRenderer.rect(hitZoneLeft.x, hitZoneLeft.y, hitZoneLeft.width, hitZoneLeft.height);
+        shapeRenderer.setColor(1, 0, 0, 0.3f); // Vermelho
+        shapeRenderer.rect(hitZoneRight.x, hitZoneRight.y, hitZoneRight.width, hitZoneRight.height);
+        for (Note note : notes) {
+            if (note.hit) continue;
+            shapeRenderer.setColor((note.type == Note.NoteType.LEFT) ? Color.CYAN : Color.MAGENTA);
+            shapeRenderer.rect(note.rect.x, note.rect.y, note.rect.width, note.rect.height);
+        }
+        shapeRenderer.end();
+
+        // Desenha Moto e UI (SpriteBatch)
+        batch.begin();
+        if (motoTexture != null) {
+            float motoX = Gdx.graphics.getWidth() / 2f - motoTexture.getWidth() / 2f;
+            batch.draw(motoTexture, motoX, 10);
+        }
+        font.setColor(feedbackColor);
+        font.draw(batch, feedback, Gdx.graphics.getWidth() / 2f - 50, Gdx.graphics.getHeight() - 50);
+        font.setColor(Color.WHITE);
+        font.draw(batch, "Score: " + score, 20, Gdx.graphics.getHeight() - 20);
+        font.draw(batch, "ESC para Sair", Gdx.graphics.getWidth() - 120, Gdx.graphics.getHeight() - 20);
+        batch.end();
+    }
+
+    @Override
+    public void hide() {
+        // Para a música e libera recursos ao sair da tela
+        dispose();
+    }
+
+    @Override
+    public void dispose() {
+        // Libera os assets DESTA TELA
+        if (musica != null) musica.dispose();
+        if (motoTexture != null) motoTexture.dispose();
+    }
+
+    // --- Métodos obrigatórios da interface Screen ---
+    @Override public void resize(int width, int height) {}
+    @Override public void pause() {}
+    @Override public void resume() {}
+}
