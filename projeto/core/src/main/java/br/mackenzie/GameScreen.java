@@ -124,7 +124,7 @@ public class GameScreen implements Screen {
             if (note.rect.y < hitZoneY - note.rect.height && !note.hit) {
                 feedback = "ERROU!";
                 feedbackColor = Color.RED;
-                score -= 5;
+                score = (score >= 5) ?  score - 5 : 0;
                 notes.removeIndex(i);
             }
         }
@@ -168,7 +168,7 @@ public class GameScreen implements Screen {
         if (!hitSomething) {
             feedback = "Errou a batida!";
             feedbackColor = Color.GRAY;
-            score -= 2;
+            score = (score >= 2) ? score - 2 : 0;
         }
     }
 
@@ -195,8 +195,8 @@ public class GameScreen implements Screen {
         // Desenha Moto e UI (SpriteBatch)
         batch.begin();
         if (motoTexture != null) {
-            float motoX = Gdx.graphics.getWidth() / 2f - motoTexture.getWidth() / 2f;
-            batch.draw(motoTexture, motoX, 10);
+            // float motoX = Gdx.graphics.getWidth() / 2f - motoTexture.getWidth() / 2f;
+            batch.draw(motoTexture, 255, 10);
         }
         font.setColor(feedbackColor);
         font.draw(batch, feedback, Gdx.graphics.getWidth() / 2f - 50, Gdx.graphics.getHeight() - 50);
