@@ -53,6 +53,8 @@ public class GameScreen implements Screen {
     private long lastNoteTime;
     private float noteSpeed = 300.0f;
     private long spawnInterval; // << VEM DAS CONFIGURAÇÕES
+    private float resizeXFactor = Gdx.graphics.getWidth() / (float)SettingsScreen.GAME_WIDTH;
+    private float resizeYFactor = Gdx.graphics.getHeight() / (float)SettingsScreen.GAME_HEIGHT;
 
     private String feedback = "Vamos começar!";
     private Color feedbackColor = Color.WHITE;
@@ -199,10 +201,15 @@ public class GameScreen implements Screen {
             batch.draw(motoTexture, 255, 10);
         }
         font.setColor(feedbackColor);
-        font.draw(batch, feedback, Gdx.graphics.getWidth() / 2f - 50, Gdx.graphics.getHeight() - 50);
+        font.draw(batch, 
+                  feedback, 
+                  resizeXFactor*(SettingsScreen.GAME_WIDTH / 2f - 50),
+                  resizeYFactor*(SettingsScreen.GAME_HEIGHT - 50));
         font.setColor(Color.WHITE);
-        font.draw(batch, "Score: " + score, 20, Gdx.graphics.getHeight() - 20);
-        font.draw(batch, "ESC para Sair", Gdx.graphics.getWidth() - 120, Gdx.graphics.getHeight() - 20);
+        font.draw(batch, "Score: " + score, 20, resizeYFactor*(SettingsScreen.GAME_HEIGHT - 20));
+        font.draw(batch, "ESC para Sair",
+                  resizeXFactor*(SettingsScreen.GAME_WIDTH - 120), 
+                  resizeYFactor*(SettingsScreen.GAME_HEIGHT - 20));
         batch.end();
     }
 

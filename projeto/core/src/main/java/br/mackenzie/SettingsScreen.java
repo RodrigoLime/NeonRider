@@ -12,9 +12,15 @@ import com.badlogic.gdx.math.Vector3;
 
 public class SettingsScreen extends InputAdapter implements Screen {
 
+    
     private final Main game;
     private Rectangle volUpButton, volDownButton, keyLeftButton, keyRightButton, backButton;
     private Vector3 touchPoint;
+
+    // Tamanho da tela
+    public static final int GAME_WIDTH = 640;
+    public static final int GAME_HEIGHT = 480;
+
 
     // Estados para remapeamento
     private boolean waitingForKeyLeft = false;
