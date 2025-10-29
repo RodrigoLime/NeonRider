@@ -10,7 +10,7 @@ import com.badlogic.gdx.math.Vector3;
 
 public class MainMenuScreen implements Screen {
 
-    private final main game;
+    private final Main game;
 
 
     private Rectangle playEasyButton;
@@ -21,7 +21,7 @@ public class MainMenuScreen implements Screen {
 
     private Vector3 touchPoint;
 
-    public MainMenuScreen(final main game) {
+    public MainMenuScreen(final Main game) {
         this.game = game;
 
         float screenWidth = Gdx.graphics.getWidth();
