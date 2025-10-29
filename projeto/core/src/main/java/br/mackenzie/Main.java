@@ -1,40 +1,46 @@
 package br.mackenzie;
 
-import com.badlogic.gdx.ApplicationListener;
+import com.badlogic.gdx.Game;
+import com.badlogic.gdx.graphics.g2d.BitmapFont;
+import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 
-/** {@link com.badlogic.gdx.ApplicationListener} implementation shared by all platforms. */
-public class Main implements ApplicationListener {
+// A classe principal agora estende 'Game'
+public class Main extends Game {
+
+    // Assets globais que todas as telas usarão
+    public SpriteBatch batch;
+    public BitmapFont font;
+    public ShapeRenderer shapeRenderer;
+
+    // Objeto global de configurações
+    public GameSettings settings;
+
     @Override
     public void create() {
-        // Prepare your application here.
-    }
+        // Inicializa os assets globais
+        batch = new SpriteBatch();
+        font = new BitmapFont();
+        shapeRenderer = new ShapeRenderer();
 
-    @Override
-    public void resize(int width, int height) {
-        // If the window is minimized on a desktop (LWJGL3) platform, width and height are 0, which causes problems.
-        // In that case, we don't resize anything, and wait for the window to be a normal size before updating.
-        if(width <= 0 || height <= 0) return;
+        // Inicializa as configurações
+        settings = new GameSettings();
 
-        // Resize your application here. The parameters represent the new window size.
+        // Define a primeira tela a ser mostrada (o Menu)
+        this.setScreen(new MainMenuScreen(this));
     }
 
     @Override
     public void render() {
-        // Draw your application here.
-    }
-
-    @Override
-    public void pause() {
-        // Invoked when your application is paused.
-    }
-
-    @Override
-    public void resume() {
-        // Invoked when your application is resumed after pause.
+        // O 'Game' delega o render para a tela atual
+        super.render();
     }
 
     @Override
     public void dispose() {
-        // Destroy application's resources here.
+        // Libera os assets globais
+        batch.dispose();
+        font.dispose();
+        shapeRenderer.dispose();
     }
 }
