@@ -60,6 +60,8 @@ public class GameScreen implements Screen {
     private Color feedbackColor = Color.WHITE;
     private int score = 0;
 
+    private int noteSpawnCount = 0;
+
     public GameScreen(final Main game) {
         // Pega os objetos globais da classe 'main'
         this.game = game;
@@ -106,10 +108,12 @@ public class GameScreen implements Screen {
 
     private void spawnNote() {
         // Mantém a lógica de sempre alternar
-        Note.NoteType type = (notes.size % 2 == 0) ? Note.NoteType.LEFT : Note.NoteType.RIGHT;
+        Note.NoteType type = (noteSpawnCount % 2 == 0) ? Note.NoteType.LEFT : Note.NoteType.RIGHT;
         float x = (type == Note.NoteType.LEFT) ? laneLeftX : laneRightX;
         notes.add(new Note(x, Gdx.graphics.getHeight(), type));
         lastNoteTime = TimeUtils.millis();
+
+        noteSpawnCount++;
     }
 
     private void updateLogic(float delta) {
@@ -201,14 +205,14 @@ public class GameScreen implements Screen {
             batch.draw(motoTexture, 255, 10);
         }
         font.setColor(feedbackColor);
-        font.draw(batch, 
-                  feedback, 
+        font.draw(batch,
+                  feedback,
                   resizeXFactor*(SettingsScreen.GAME_WIDTH / 2f - 50),
                   resizeYFactor*(SettingsScreen.GAME_HEIGHT - 50));
         font.setColor(Color.WHITE);
         font.draw(batch, "Score: " + score, 20, resizeYFactor*(SettingsScreen.GAME_HEIGHT - 20));
         font.draw(batch, "ESC para Sair",
-                  resizeXFactor*(SettingsScreen.GAME_WIDTH - 120), 
+                  resizeXFactor*(SettingsScreen.GAME_WIDTH - 120),
                   resizeYFactor*(SettingsScreen.GAME_HEIGHT - 20));
         batch.end();
     }
