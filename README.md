@@ -34,6 +34,14 @@ O jogo induz um estado de "Flow State" através de um ciclo rítmico contínuo, 
 
 4. Repetir: Sustentar o "flow" até o fim da fase.
 
+## Protótipo inicial do jogo
+
+A imagem a seguir mostra um protótipo inicial que já inclui a principal mecânica do jogo e o sprite do jogador. Os retângulos que vêm de cima representam as batidas da música, o jogador deve pedalar de acordo com elas para pontuar.
+
+Também serão implementados um fundo e uma pista com efeito de paralaxe, além de 3 fases com níveis de dificuldade diferentes (fácil, médio e difícil). Cada fase terá uma velocidade diferente para testar a resistência cardiovascular do jogador e sua capacidade de pedalar constantemente.
+
+![imagemProtótipo](https://github.com/RodrigoLime/NeonRider/blob/main/projeto/assets/Screenshot%202025-11-04%20at%2021.28.38.png?raw=true)
+
 
 ## One Page Document
 <img width="1999" height="5237" alt="image" src="https://github.com/user-attachments/assets/f510020e-ef78-4978-99eb-70eebb920f71" />
