@@ -17,9 +17,10 @@ public class SettingsScreen extends InputAdapter implements Screen {
     private Rectangle volUpButton, volDownButton, keyLeftButton, keyRightButton, backButton;
     private Vector3 touchPoint;
 
-    // Tamanho da tela
+    // Tamanho da tela virtual (constantes)
     public static final int GAME_WIDTH = 640;
     public static final int GAME_HEIGHT = 480;
+    
 
 
     // Estados para remapeamento
@@ -28,8 +29,10 @@ public class SettingsScreen extends InputAdapter implements Screen {
 
     public SettingsScreen(final Main game) {
         this.game = game;
-        float x = Gdx.graphics.getWidth() / 2 - 150;
+        // Usamos coordenadas virtuais
+        float x = GAME_WIDTH / 2 - 150;
 
+        // Todos os valores de retângulo agora são em coordenadas virtuais (640x480)
         volUpButton = new Rectangle(x + 160, 300, 140, 40);
         volDownButton = new Rectangle(x, 300, 140, 40);
         keyLeftButton = new Rectangle(x, 200, 300, 40);
@@ -49,6 +52,8 @@ public class SettingsScreen extends InputAdapter implements Screen {
     public void render(float delta) {
         Gdx.gl.glClearColor(0.2f, 0.1f, 0.1f, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+
+        // A câmera já está sendo aplicada na classe Main
 
         // Desenha os "botões"
         game.shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
@@ -86,12 +91,10 @@ public class SettingsScreen extends InputAdapter implements Screen {
     @Override
     public boolean touchDown(int screenX, int screenY, int pointer, int button) {
 
-        // --- LINHA CORRIGIDA ---
-        // Converte coordenadas (origem no topo) para coordenadas do mundo (origem embaixo)
-        touchPoint.set(screenX, Gdx.graphics.getHeight() - screenY, 0);
-        // --- FIM DA CORREÇÃO ---
 
-        // Cancela o "esperando tecla" se clicar em qualquer outro botão
+        touchPoint.set(screenX, screenY, 0);
+        game.viewport.unproject(touchPoint);
+        
         waitingForKeyLeft = false;
         waitingForKeyRight = false;
 
@@ -132,6 +135,7 @@ public class SettingsScreen extends InputAdapter implements Screen {
         Gdx.input.setInputProcessor(null);
     }
 
+    // O resize agora é tratado na classe Main
     @Override public void resize(int width, int height) {}
     @Override public void pause() {}
     @Override public void resume() {}

@@ -16,7 +16,7 @@ import com.badlogic.gdx.utils.TimeUtils;
 
 public class GameScreen implements Screen {
 
-    // Classe interna privada para representar uma nota caindo
+    // ... (Classe 'Note' permanece igual) ...
     private static class Note {
         enum NoteType { LEFT, RIGHT }
         Rectangle rect;
@@ -24,7 +24,7 @@ public class GameScreen implements Screen {
         boolean hit = false;
 
         public Note(float x, float y, NoteType type) {
-            this.rect = new Rectangle(x, y, 50, 20);
+            this.rect = new Rectangle(x, y, 50, 20); // Largura 50, Altura 20 (virtual)
             this.type = type;
         }
         public void update(float delta, float speed) {
@@ -43,7 +43,7 @@ public class GameScreen implements Screen {
     private Music musica;
     private Texture motoTexture;
 
-    // Posições
+    // Posições (em coordenadas virtuais 640x480)
     private float laneLeftX, laneRightX, laneWidth = 50;
     private Rectangle hitZoneLeft, hitZoneRight;
     private float hitZoneY = 100;
@@ -52,9 +52,11 @@ public class GameScreen implements Screen {
     private Array<Note> notes;
     private long lastNoteTime;
     private float noteSpeed = 300.0f;
-    private long spawnInterval; // << VEM DAS CONFIGURAÇÕES
-    private float resizeXFactor = Gdx.graphics.getWidth() / (float)SettingsScreen.GAME_WIDTH;
-    private float resizeYFactor = Gdx.graphics.getHeight() / (float)SettingsScreen.GAME_HEIGHT;
+    private long spawnInterval;
+    
+    // Não precisamos mais dos fatores de resize
+    // private float resizeXFactor = Gdx.graphics.getWidth() / (float)SettingsScreen.GAME_WIDTH;
+    // private float resizeYFactor = Gdx.graphics.getHeight() / (float)SettingsScreen.GAME_HEIGHT;
 
     private String feedback = "Vamos começar!";
     private Color feedbackColor = Color.WHITE;
@@ -85,10 +87,10 @@ public class GameScreen implements Screen {
             musica.setVolume(settings.volume);
         } catch (Exception e) { Gdx.app.error("Audio", "Nao foi possivel carregar musica.mp3", e); }
 
-        // Configura pistas
-        float screenWidth = Gdx.graphics.getWidth();
-        laneLeftX = screenWidth / 2f - laneWidth * 1.5f;
-        laneRightX = screenWidth / 2f + laneWidth * 0.5f;
+        // Configura pistas usando coordenadas virtuais
+        float virtualWidth = SettingsScreen.GAME_WIDTH;
+        laneLeftX = virtualWidth / 2f - laneWidth * 1.5f;
+        laneRightX = virtualWidth / 2f + laneWidth * 0.5f;
         hitZoneLeft = new Rectangle(laneLeftX, hitZoneY, laneWidth, 20);
         hitZoneRight = new Rectangle(laneRightX, hitZoneY, laneWidth, 20);
 
@@ -110,7 +112,8 @@ public class GameScreen implements Screen {
         // Mantém a lógica de sempre alternar
         Note.NoteType type = (noteSpawnCount % 2 == 0) ? Note.NoteType.LEFT : Note.NoteType.RIGHT;
         float x = (type == Note.NoteType.LEFT) ? laneLeftX : laneRightX;
-        notes.add(new Note(x, Gdx.graphics.getHeight(), type));
+        // Spawna no topo da tela virtual
+        notes.add(new Note(x, SettingsScreen.GAME_HEIGHT, type));
         lastNoteTime = TimeUtils.millis();
 
         noteSpawnCount++;
@@ -184,6 +187,8 @@ public class GameScreen implements Screen {
 
         Gdx.gl.glClearColor(0.1f, 0.1f, 0.2f, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+        
+        // A câmera já está sendo aplicada na classe Main
 
         // Desenha Zonas e Notas (ShapeRenderer)
         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
@@ -201,19 +206,21 @@ public class GameScreen implements Screen {
         // Desenha Moto e UI (SpriteBatch)
         batch.begin();
         if (motoTexture != null) {
-            // float motoX = Gdx.graphics.getWidth() / 2f - motoTexture.getWidth() / 2f;
+            // Posição da moto em coordenadas virtuais
             batch.draw(motoTexture, 255, 10);
         }
+        
+        // Desenha UI usando coordenadas virtuais
         font.setColor(feedbackColor);
         font.draw(batch,
                   feedback,
-                  resizeXFactor*(SettingsScreen.GAME_WIDTH / 2f - 50),
-                  resizeYFactor*(SettingsScreen.GAME_HEIGHT - 50));
+                  (SettingsScreen.GAME_WIDTH / 2f - 50),  // Centralizado
+                  (SettingsScreen.GAME_HEIGHT - 50)); // Topo
         font.setColor(Color.WHITE);
-        font.draw(batch, "Score: " + score, 20, resizeYFactor*(SettingsScreen.GAME_HEIGHT - 20));
+        font.draw(batch, "Score: " + score, 20, (SettingsScreen.GAME_HEIGHT - 20)); // Canto superior esquerdo
         font.draw(batch, "ESC para Sair",
-                  resizeXFactor*(SettingsScreen.GAME_WIDTH - 120),
-                  resizeYFactor*(SettingsScreen.GAME_HEIGHT - 20));
+                  (SettingsScreen.GAME_WIDTH - 120), // Canto superior direito
+                  (SettingsScreen.GAME_HEIGHT - 20));
         batch.end();
     }
 
@@ -231,6 +238,7 @@ public class GameScreen implements Screen {
     }
 
     // --- Métodos obrigatórios da interface Screen ---
+    // O resize agora é tratado na classe Main
     @Override public void resize(int width, int height) {}
     @Override public void pause() {}
     @Override public void resume() {}
