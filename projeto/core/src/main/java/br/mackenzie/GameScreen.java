@@ -79,8 +79,8 @@ public class GameScreen implements Screen {
     private int noteSpawnCount = 0;
 
     // Referências para o tamanho virtual
-    private final float V_WIDTH = MainMenuScreen.GAME_WIDTH;
-    private final float V_HEIGHT = MainMenuScreen.GAME_HEIGHT;
+    private final float V_WIDTH = SettingsScreen.GAME_WIDTH;
+    private final float V_HEIGHT = SettingsScreen.GAME_HEIGHT;
 
     public GameScreen(final Main game) {
         this.game = game;
