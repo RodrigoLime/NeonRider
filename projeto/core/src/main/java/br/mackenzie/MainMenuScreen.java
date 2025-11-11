@@ -11,8 +11,9 @@ import com.badlogic.gdx.math.Vector3;
 import static br.mackenzie.SettingsScreen.GAME_WIDTH;
 
 public class MainMenuScreen implements Screen {
-
     private final Main game;
+
+    private boolean ignoreNextInput = true;
 
     private Rectangle playEasyButton;
     private Rectangle playMediumButton;
@@ -25,7 +26,7 @@ public class MainMenuScreen implements Screen {
     public MainMenuScreen(final Main game) {
         this.game = game;
 
-
+        this.ignoreNextInput = true;
         float buttonWidth = 200; // Largura em unidades virtuais
         float buttonHeight = 50; // Altura em unidades virtuais
         
@@ -79,6 +80,12 @@ public class MainMenuScreen implements Screen {
 
         if (Gdx.input.justTouched()) {
 
+            if (ignoreNextInput) {
+            // Se esta é a primeira renderização após o setScreen, desativa o flag e retorna.
+                ignoreNextInput = false;
+                return; // Sai do processamento de toque neste frame
+            }
+
             // --- CORREÇÃO NA DETECÇÃO DE CLIQUE ---
             
             // 1. Pega as coordenadas X e Y da tela (sem inverter o Y manualmente)
@@ -93,14 +100,18 @@ public class MainMenuScreen implements Screen {
             if (playEasyButton.contains(touchPoint.x, touchPoint.y)) {
                 game.settings.difficulty = GameSettings.Difficulty.EASY;
                 game.setScreen(new GameScreen(game));
+                dispose();
             } else if (playMediumButton.contains(touchPoint.x, touchPoint.y)) {
                 game.settings.difficulty = GameSettings.Difficulty.MEDIUM;
                 game.setScreen(new GameScreen(game));
+                dispose();
             } else if (playHardButton.contains(touchPoint.x, touchPoint.y)) {
                 game.settings.difficulty = GameSettings.Difficulty.HARD;
                 game.setScreen(new GameScreen(game));
+                dispose(); 
             } else if (settingsButton.contains(touchPoint.x, touchPoint.y)) {
                 game.setScreen(new SettingsScreen(game));
+                dispose();
             } else if (exitButton.contains(touchPoint.x, touchPoint.y)) {
                 Gdx.app.exit();
             }
