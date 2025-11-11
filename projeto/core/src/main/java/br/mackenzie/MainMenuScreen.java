@@ -13,7 +13,7 @@ import static br.mackenzie.SettingsScreen.GAME_WIDTH;
 public class MainMenuScreen implements Screen {
     private final Main game;
 
-    private boolean ignoreNextInput = true;
+    private int ignoreInputFrames = 2;
 
     private Rectangle playEasyButton;
     private Rectangle playMediumButton;
@@ -26,7 +26,7 @@ public class MainMenuScreen implements Screen {
     public MainMenuScreen(final Main game) {
         this.game = game;
 
-        this.ignoreNextInput = true;
+        
         float buttonWidth = 200; // Largura em unidades virtuais
         float buttonHeight = 50; // Altura em unidades virtuais
         
@@ -50,6 +50,7 @@ public class MainMenuScreen implements Screen {
         Gdx.gl.glClearColor(0.1f, 0.1f, 0.2f, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
+        
         // A câmera e o viewport já são aplicados na classe Main.java
         // Os renderizadores já estão com a projeção correta.
 
@@ -77,14 +78,12 @@ public class MainMenuScreen implements Screen {
         game.font.draw(game.batch, "Sair", exitButton.x + 85, exitButton.y + 30);
         game.batch.end();
 
+        if (ignoreInputFrames > 0) {
+            ignoreInputFrames--;
+            return; // Sai do método antes de processar inputs
+    }
 
         if (Gdx.input.justTouched()) {
-
-            if (ignoreNextInput) {
-            // Se esta é a primeira renderização após o setScreen, desativa o flag e retorna.
-                ignoreNextInput = false;
-                return; // Sai do processamento de toque neste frame
-            }
 
             // --- CORREÇÃO NA DETECÇÃO DE CLIQUE ---
             
