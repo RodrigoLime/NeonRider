@@ -91,8 +91,8 @@ public class GameScreen implements Screen {
         this.spawnInterval = settings.difficulty.spawnInterval;
 
         try {
-            sceneryTexture = new Texture(Gdx.files.internal("cyber_city.png"));
-        } catch (Exception e) { Gdx.app.error("Texture", "Nao foi possivel carregar cyber_city.png", e); }
+            sceneryTexture = new Texture(Gdx.files.internal("background-1.png"));
+        } catch (Exception e) { Gdx.app.error("Texture", "Nao foi possivel carregar background-1.png", e); }
         try {
             roadTexture = new Texture(Gdx.files.internal("neon_road.png"));
         } catch (Exception e) { Gdx.app.error("Texture", "Nao foi possivel carregar neon_road.png", e); }
