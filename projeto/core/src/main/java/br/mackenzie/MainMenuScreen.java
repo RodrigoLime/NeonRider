@@ -4,6 +4,7 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
+import com.badlogic.gdx.graphics.g2d.GlyphLayout; // Import do GlyphLayout
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector3;
@@ -21,9 +22,11 @@ public class MainMenuScreen implements Screen {
     private Rectangle exitButton;
 
     private Vector3 touchPoint;
+    private GlyphLayout layout; // Para medir e centralizar texto
 
     public MainMenuScreen(final Main game) {
         this.game = game;
+        this.layout = new GlyphLayout(); // Inicializa o layout
 
         float buttonWidth = 200;
         float buttonHeight = 50;
@@ -44,6 +47,7 @@ public class MainMenuScreen implements Screen {
         Gdx.gl.glClearColor(0.1f, 0.1f, 0.2f, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
+        // --- Desenha Botões (sem mudança) ---
         game.shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
         game.shapeRenderer.setColor(Color.BLUE);
         game.shapeRenderer.rect(playEasyButton.x, playEasyButton.y, playEasyButton.width, playEasyButton.height);
@@ -57,15 +61,44 @@ public class MainMenuScreen implements Screen {
         game.shapeRenderer.rect(exitButton.x, exitButton.y, exitButton.width, exitButton.height);
         game.shapeRenderer.end();
 
+        // --- Texto Centralizado com GlyphLayout ---
         game.batch.begin();
         game.font.setColor(Color.WHITE);
-        game.font.draw(game.batch, "Jogar (Facil)", playEasyButton.x + 60, playEasyButton.y + 30);
-        game.font.draw(game.batch, "Jogar (Medio)", playMediumButton.x + 55, playMediumButton.y + 30);
-        game.font.draw(game.batch, "Jogar (Dificil)", playHardButton.x + 50, playHardButton.y + 30);
-        game.font.draw(game.batch, "Configuracoes", settingsButton.x + 50, settingsButton.y + 30);
-        game.font.draw(game.batch, "Sair", exitButton.x + 85, exitButton.y + 30);
-        game.batch.end();
+        
+        // Centraliza "Jogar (Facil)"
+        layout.setText(game.font, "Jogar (Facil)");
+        game.font.draw(game.batch, layout,
+                playEasyButton.x + (playEasyButton.width - layout.width) / 2f,
+                playEasyButton.y + (playEasyButton.height + layout.height) / 2f);
 
+        // Centraliza "Jogar (Medio)"
+        layout.setText(game.font, "Jogar (Medio)");
+        game.font.draw(game.batch, layout,
+                playMediumButton.x + (playMediumButton.width - layout.width) / 2f,
+                playMediumButton.y + (playMediumButton.height + layout.height) / 2f);
+
+        // Centraliza "Jogar (Dificil)"
+        layout.setText(game.font, "Jogar (Dificil)");
+        game.font.draw(game.batch, layout,
+                playHardButton.x + (playHardButton.width - layout.width) / 2f,
+                playHardButton.y + (playHardButton.height + layout.height) / 2f);
+
+        // Centraliza "Configuracoes"
+        layout.setText(game.font, "Configuracoes");
+        game.font.draw(game.batch, layout,
+                settingsButton.x + (settingsButton.width - layout.width) / 2f,
+                settingsButton.y + (settingsButton.height + layout.height) / 2f);
+
+        // Centraliza "Sair"
+        layout.setText(game.font, "Sair");
+        game.font.draw(game.batch, layout,
+                exitButton.x + (exitButton.width - layout.width) / 2f,
+                exitButton.y + (exitButton.height + layout.height) / 2f);
+        
+        game.batch.end();
+        // --- FIM DA MUDANÇA ---
+
+        // --- Lógica de Input (sem mudança) ---
         if (ignoreInputFrames > 0) {
             ignoreInputFrames--;
             return;
