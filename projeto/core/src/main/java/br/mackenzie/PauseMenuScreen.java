@@ -4,6 +4,7 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
+import com.badlogic.gdx.graphics.g2d.GlyphLayout; // Import do GlyphLayout
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector3;
@@ -22,10 +23,12 @@ public class PauseMenuScreen implements Screen {
     private Rectangle exitButton;
 
     private Vector3 touchPoint;
+    private GlyphLayout layout; // Para medir e centralizar texto
 
     public PauseMenuScreen(final Main game, final GameScreen gameScreen) {
         this.game = game;
         this.gameScreen = gameScreen;
+        this.layout = new GlyphLayout(); // Inicializa o layout
 
         float buttonWidth = 200;
         float buttonHeight = 50;
@@ -42,12 +45,10 @@ public class PauseMenuScreen implements Screen {
 
     @Override
     public void render(float delta) {
-        // Renderiza o jogo congelado em baixo
+        // --- Renderiza jogo e overlay (sem mudança) ---
         if (gameScreen != null) {
             gameScreen.renderGameOnly();
         }
-
-        // Overlay escuro semi-transparente
         Gdx.gl.glEnable(GL20.GL_BLEND);
         Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
         game.shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
@@ -56,45 +57,61 @@ public class PauseMenuScreen implements Screen {
         game.shapeRenderer.end();
         Gdx.gl.glDisable(GL20.GL_BLEND);
 
-        // Desenha os botões
+        // --- Desenha botões (sem mudança) ---
         game.shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
-        
         game.shapeRenderer.setColor(Color.GREEN);
         game.shapeRenderer.rect(continueButton.x, continueButton.y, continueButton.width, continueButton.height);
-        
         game.shapeRenderer.setColor(Color.YELLOW);
         game.shapeRenderer.rect(restartButton.x, restartButton.y, restartButton.width, restartButton.height);
-        
         game.shapeRenderer.setColor(Color.GRAY);
         game.shapeRenderer.rect(settingsButton.x, settingsButton.y, settingsButton.width, settingsButton.height);
-        
         game.shapeRenderer.setColor(Color.DARK_GRAY);
         game.shapeRenderer.rect(exitButton.x, exitButton.y, exitButton.width, exitButton.height);
-        
         game.shapeRenderer.end();
 
-        // Desenha os textos
+        // --- Texto Centralizado com GlyphLayout ---
         game.batch.begin();
         game.font.setColor(Color.WHITE);
         
-        // Título
-        game.font.draw(game.batch, "PAUSE", GAME_WIDTH / 2f - 30, 420);
+        // Título "PAUSE"
+        layout.setText(game.font, "PAUSE");
+        game.font.draw(game.batch, layout,
+                (GAME_WIDTH - layout.width) / 2f,
+                420f);
         
-        // Textos dos botões
-        game.font.draw(game.batch, "Continuar", continueButton.x + 65, continueButton.y + 30);
-        game.font.draw(game.batch, "Reiniciar", restartButton.x + 65, restartButton.y + 30);
-        game.font.draw(game.batch, "Configuracoes", settingsButton.x + 50, settingsButton.y + 30);
-        game.font.draw(game.batch, "Sair para Menu", exitButton.x + 40, exitButton.y + 30);
+        // Centraliza "Continuar"
+        layout.setText(game.font, "Continuar");
+        game.font.draw(game.batch, layout,
+                continueButton.x + (continueButton.width - layout.width) / 2f,
+                continueButton.y + (continueButton.height + layout.height) / 2f);
+
+        // Centraliza "Reiniciar"
+        layout.setText(game.font, "Reiniciar");
+        game.font.draw(game.batch, layout,
+                restartButton.x + (restartButton.width - layout.width) / 2f,
+                restartButton.y + (restartButton.height + layout.height) / 2f);
+        
+        // Centraliza "Configuracoes"
+        layout.setText(game.font, "Configuracoes");
+        game.font.draw(game.batch, layout,
+                settingsButton.x + (settingsButton.width - layout.width) / 2f,
+                settingsButton.y + (settingsButton.height + layout.height) / 2f);
+
+        // Centraliza "Sair para Menu"
+        layout.setText(game.font, "Sair para Menu");
+        game.font.draw(game.batch, layout,
+                exitButton.x + (exitButton.width - layout.width) / 2f,
+                exitButton.y + (exitButton.height + layout.height) / 2f);
         
         game.batch.end();
+        // --- FIM DA MUDANÇA ---
 
-        // Ignora inputs iniciais
+        // --- Lógica de Input (sem mudança) ---
         if (ignoreInputFrames > 0) {
             ignoreInputFrames--;
             return;
         }
 
-        // Processa inputs
         if (Gdx.input.justTouched()) {
             touchPoint.set(Gdx.input.getX(), Gdx.input.getY(), 0);
             game.viewport.unproject(touchPoint);

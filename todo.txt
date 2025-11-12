@@ -1,0 +1,3 @@
+- [] Colocar os menus de acordo com os requisitos do documento do trabalho
+- [] Colocar final da fase
+- [] Adicionar animação para quando pegar a nota (pode ser uma espécie de shader)
