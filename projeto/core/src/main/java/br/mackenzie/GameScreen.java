@@ -59,13 +59,14 @@ public class GameScreen implements Screen {
     private float roadScrollY = 0;
 
     private float sceneryScrollY = 0;
-    private float scenerySpeedMultiplier = 0.2f;
+    private float scenerySpeedMultiplier = 0.2f; // cenário anda 20% da velocidade da estrada
+
 
     // --- LÓGICA DE PONTUAÇÃO ---
     private int score = 0;
     private int combo = 0;
     private int multiplier = 1;
-    
+
     private final int COMBO_THRESHOLD = 10;
     private final int MAX_MULTIPLIER = 4;
     private final int POINTS_PER_NOTE = 10;
@@ -160,8 +161,10 @@ public class GameScreen implements Screen {
                 multiplier = 1;
                 hitsSinceLastMultiplier = 0;
                 
+                hitsSinceLastMultiplier = 0; // <-- NOVO: Reseta o progresso
+
                 setHitFeedback("PERDEU!", Color.GRAY);
-                
+
                 notes.removeIndex(i);
             }
         }
@@ -170,7 +173,6 @@ public class GameScreen implements Screen {
 
         roadScrollY += delta * noteSpeed;
         sceneryScrollY += delta * noteSpeed * scenerySpeedMultiplier;
-
 
     }
 
@@ -189,7 +191,7 @@ public class GameScreen implements Screen {
             Note note = notes.get(i);
             if (note.type == type && !note.hit) {
                 if (note.rect.overlaps(hitZone)) {
-                    
+
                     // Lógica de Combo/Multiplicador
                     combo++;
                     hitsSinceLastMultiplier++;
@@ -200,10 +202,12 @@ public class GameScreen implements Screen {
                         hitsSinceLastMultiplier = 0;
                     } else if (multiplier == MAX_MULTIPLIER) {
                         hitsSinceLastMultiplier = Math.min(hitsSinceLastMultiplier, COMBO_THRESHOLD); 
+                        // Se já está no máximo, continue adicionando hits, mas não aumente mais
+                        hitsSinceLastMultiplier = Math.min(hitsSinceLastMultiplier, COMBO_THRESHOLD);
                     }
-                    
-                    score += (POINTS_PER_NOTE * multiplier); 
-                    
+
+                    score += (POINTS_PER_NOTE * multiplier);
+
                     setHitFeedback("ACERTOU!", Color.GREEN);
 
                     note.hit = true;
@@ -213,7 +217,7 @@ public class GameScreen implements Screen {
                 }
             }
         }
-        
+
         if (!hitSomething) {
             score = (score >= 2) ? score - 2 : 0;
             combo = 0;
@@ -227,7 +231,7 @@ public class GameScreen implements Screen {
     public void renderGameOnly() {
         Gdx.gl.glClearColor(0.1f, 0.1f, 0.2f, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
-        
+
         batch.begin();
 
         // 1. Cenário
@@ -251,22 +255,22 @@ public class GameScreen implements Screen {
                 batch.draw(sceneryTexture, drawX, currentY + i * drawHeight, drawWidth, drawHeight);
             }
         }
-        
-        // 2. Rua (Scroll)
+
         if (roadTexture != null && roadTexture.getHeight() > 0) {
-            float roadVisualWidth = 240; 
+            float roadVisualWidth = 240;
             float roadVisualX = (V_WIDTH / 2f) - (roadVisualWidth / 2f);
             float currentY = -(roadScrollY % roadTexture.getHeight());
             batch.draw(roadTexture, roadVisualX, currentY, roadVisualWidth, roadTexture.getHeight());
             batch.draw(roadTexture, roadVisualX, currentY + roadTexture.getHeight(), roadVisualWidth, roadTexture.getHeight());
         }
-        
+
         // 3. Moto
         if (motoTexture != null) {
             batch.draw(motoTexture, (V_WIDTH / 2f) - (motoTexture.getWidth() / 2f) , 10);
         }
-        
-        // 4. UI (Texto)
+
+        // --- 4. DESENHA A UI (Texto) ---
+
         font.setColor(Color.WHITE);
         font.draw(batch, "Score: " + score, 20, (V_HEIGHT - 20));
 
@@ -280,7 +284,7 @@ public class GameScreen implements Screen {
 
         if (combo > 0) {
             font.setColor(Color.WHITE);
-            font.draw(batch, "" + combo, 20, (V_HEIGHT - 70)); 
+            font.draw(batch, "" + combo, 20, (V_HEIGHT - 70));
         }
 
         // Feedback de Acerto/Erro
@@ -288,18 +292,18 @@ public class GameScreen implements Screen {
             font.setColor(hitFeedbackColor);
             font.draw(batch, hitFeedback, (V_WIDTH / 2f) - 35, 150);
         }
-        
+
         batch.end();
 
         // ShapeRenderer (Notas, Hitboxes e Barra)
         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
-        
+
         // Zonas de Acerto
         shapeRenderer.setColor(0, 1, 0, 0.3f);
         shapeRenderer.rect(hitZoneLeft.x, hitZoneLeft.y, hitZoneLeft.width, hitZoneLeft.height);
         shapeRenderer.setColor(1, 0, 0, 0.3f);
         shapeRenderer.rect(hitZoneRight.x, hitZoneRight.y, hitZoneRight.width, hitZoneRight.height);
-        
+
         // Notas
         for (Note note : notes) {
             if (note.hit) continue;
@@ -318,11 +322,13 @@ public class GameScreen implements Screen {
             shapeRenderer.rect(barX, barY, barWidth, barHeight);
 
             float progress = (float)hitsSinceLastMultiplier / COMBO_THRESHOLD;
-            
-            shapeRenderer.setColor(Color.LIME);
+
+            // Cor da barra (pode mudar com o progresso)
+            shapeRenderer.setColor(Color.LIME); // Verde limão
             shapeRenderer.rect(barX, barY, barWidth * progress, barHeight);
         }
-        
+        // --- FIM DA BARRA ---
+
         shapeRenderer.end();
     }
 
