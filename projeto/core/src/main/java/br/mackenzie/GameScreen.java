@@ -58,6 +58,9 @@ public class GameScreen implements Screen {
     private long spawnInterval;
     private float roadScrollY = 0;
 
+    private float sceneryScrollY = 0;
+    private float scenerySpeedMultiplier = 0.2f;
+
     // --- LÓGICA DE PONTUAÇÃO ---
     private int score = 0;
     private int combo = 0;
@@ -67,9 +70,8 @@ public class GameScreen implements Screen {
     private final int MAX_MULTIPLIER = 4;
     private final int POINTS_PER_NOTE = 10;
 
-    // --- NOVO: LÓGICA DE PROGRESSO DO MULTIPLICADOR ---
-    private int hitsSinceLastMultiplier = 0; // <-- NOVO: Contador de acertos para a barra
-    // --- FIM DO NOVO ---
+    // --- LÓGICA DE PROGRESSO DO MULTIPLICADOR ---
+    private int hitsSinceLastMultiplier = 0;
 
     // Lógica de Feedback de Acerto
     private String hitFeedback = "";
@@ -92,7 +94,7 @@ public class GameScreen implements Screen {
 
         try {
             sceneryTexture = new Texture(Gdx.files.internal("background-1.png"));
-        } catch (Exception e) { Gdx.app.error("Texture", "Nao foi possivel carregar background-1.png", e); }
+        } catch (Exception e) { Gdx.app.error("Texture", "Nao foi possivel carregar background-1", e); }
         try {
             roadTexture = new Texture(Gdx.files.internal("neon_road.png"));
         } catch (Exception e) { Gdx.app.error("Texture", "Nao foi possivel carregar neon_road.png", e); }
@@ -156,7 +158,7 @@ public class GameScreen implements Screen {
                 score = (score >= 5) ?  score - 5 : 0;
                 combo = 0;
                 multiplier = 1;
-                hitsSinceLastMultiplier = 0; // <-- NOVO: Reseta o progresso
+                hitsSinceLastMultiplier = 0;
                 
                 setHitFeedback("PERDEU!", Color.GRAY);
                 
@@ -166,11 +168,10 @@ public class GameScreen implements Screen {
 
         handleInput();
 
-        if(Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
-            game.setScreen(new MainMenuScreen(game));
-        }
-
         roadScrollY += delta * noteSpeed;
+        sceneryScrollY += delta * noteSpeed * scenerySpeedMultiplier;
+
+
     }
 
     private void handleInput() {
@@ -191,14 +192,13 @@ public class GameScreen implements Screen {
                     
                     // Lógica de Combo/Multiplicador
                     combo++;
-                    hitsSinceLastMultiplier++; // <-- NOVO: Incrementa o contador de progresso
+                    hitsSinceLastMultiplier++;
 
                     // Se atingiu o threshold E não está no multiplicador máximo
                     if (hitsSinceLastMultiplier >= COMBO_THRESHOLD && multiplier < MAX_MULTIPLIER) {
-                        multiplier++; // Aumenta o multiplicador
-                        hitsSinceLastMultiplier = 0; // Reseta o progresso para o próximo nível
+                        multiplier++;
+                        hitsSinceLastMultiplier = 0;
                     } else if (multiplier == MAX_MULTIPLIER) {
-                        // Se já está no máximo, continue adicionando hits, mas não aumente mais
                         hitsSinceLastMultiplier = Math.min(hitsSinceLastMultiplier, COMBO_THRESHOLD); 
                     }
                     
@@ -218,24 +218,41 @@ public class GameScreen implements Screen {
             score = (score >= 2) ? score - 2 : 0;
             combo = 0;
             multiplier = 1;
-            hitsSinceLastMultiplier = 0; // <-- NOVO: Reseta o progresso
+            hitsSinceLastMultiplier = 0;
             setHitFeedback("ERROU!", Color.RED);
         }
     }
 
-    @Override
-    public void render(float delta) {
-        updateLogic(delta);
-
+    // NOVO: Método para renderizar apenas visualmente (sem atualizar lógica)
+    public void renderGameOnly() {
         Gdx.gl.glClearColor(0.1f, 0.1f, 0.2f, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
         
         batch.begin();
 
-        // 1. Cenário e 2. Rua (Scroll)
+        // 1. Cenário
         if (sceneryTexture != null) {
-            batch.draw(sceneryTexture, 0, 0, V_WIDTH, V_HEIGHT);
+            float texWidth = sceneryTexture.getWidth();
+            float texHeight = sceneryTexture.getHeight();
+
+            // Mantém proporção e centraliza horizontalmente
+            float scale = V_WIDTH / texWidth; // ajusta para caber na largura da tela
+            float drawWidth = texWidth * scale;
+            float drawHeight = texHeight * scale;
+            float drawX = (V_WIDTH - drawWidth) / 2f; // centraliza o fundo
+
+            // Faz o scroll mais lento (parallax)
+            float currentY = -(sceneryScrollY % drawHeight);
+
+            // Quantas cópias são necessárias para cobrir a altura
+            int copies = (int)Math.ceil(V_HEIGHT / drawHeight) + 1;
+
+            for (int i = 0; i < copies; i++) {
+                batch.draw(sceneryTexture, drawX, currentY + i * drawHeight, drawWidth, drawHeight);
+            }
         }
+        
+        // 2. Rua (Scroll)
         if (roadTexture != null && roadTexture.getHeight() > 0) {
             float roadVisualWidth = 240; 
             float roadVisualX = (V_WIDTH / 2f) - (roadVisualWidth / 2f);
@@ -249,11 +266,9 @@ public class GameScreen implements Screen {
             batch.draw(motoTexture, (V_WIDTH / 2f) - (motoTexture.getWidth() / 2f) , 10);
         }
         
-        // --- 4. DESENHA A UI (Texto) ---
-        
+        // 4. UI (Texto)
         font.setColor(Color.WHITE);
         font.draw(batch, "Score: " + score, 20, (V_HEIGHT - 20));
-        font.draw(batch, "ESC para Sair", (V_WIDTH - 120), (V_HEIGHT - 20));
 
         // UI de Combo/Multiplicador
         if (multiplier > 1) {
@@ -268,17 +283,15 @@ public class GameScreen implements Screen {
             font.draw(batch, "" + combo, 20, (V_HEIGHT - 70)); 
         }
 
-        // Feedback de Acerto/Erro (Perto da Hitzone)
+        // Feedback de Acerto/Erro
         if (feedbackTimer > 0 && !hitFeedback.isEmpty()) {
             font.setColor(hitFeedbackColor);
             font.draw(batch, hitFeedback, (V_WIDTH / 2f) - 35, 150);
         }
         
         batch.end();
-        // --- FIM DO SpriteBatch ---
 
-
-        // --- ShapeRenderer (Notas, Hitboxes e Barra de Multiplicador) ---
+        // ShapeRenderer (Notas, Hitboxes e Barra)
         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
         
         // Zonas de Acerto
@@ -294,35 +307,50 @@ public class GameScreen implements Screen {
             shapeRenderer.rect(note.rect.x, note.rect.y, note.rect.width, note.rect.height);
         }
 
-        // --- NOVO: BARRA DE PROGRESSO DO MULTIPLICADOR ---
-        // Desenha a barra de progresso apenas se não estiver no multiplicador máximo
+        // Barra de progresso do multiplicador
         if (multiplier < MAX_MULTIPLIER) {
-            // Posição e tamanho da barra
             float barX = 20;
             float barY = V_HEIGHT - 90;
             float barWidth = 80;
             float barHeight = 8;
 
-            // Fundo da barra
             shapeRenderer.setColor(Color.DARK_GRAY);
             shapeRenderer.rect(barX, barY, barWidth, barHeight);
 
-            // Calcula o progresso (0.0 a 1.0)
             float progress = (float)hitsSinceLastMultiplier / COMBO_THRESHOLD;
             
-            // Cor da barra (pode mudar com o progresso)
-            shapeRenderer.setColor(Color.LIME); // Verde limão
+            shapeRenderer.setColor(Color.LIME);
             shapeRenderer.rect(barX, barY, barWidth * progress, barHeight);
         }
-        // --- FIM DA BARRA ---
         
         shapeRenderer.end();
-        // --- FIM DO ShapeRenderer ---
+    }
+
+    @Override
+    public void render(float delta) {
+        // NOVO: Verifica se ESC foi pressionado para pausar
+        if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
+            if (musica != null) {
+                musica.pause(); // Pausa a música
+            }
+            game.setScreen(new PauseMenuScreen(game, this));
+            return; // Não executa o resto do render
+        }
+
+        updateLogic(delta);
+        renderGameOnly();
+    }
+    
+    // Método para retomar a música quando voltar do pause
+    public void resumeMusic() {
+        if (musica != null && !musica.isPlaying()) {
+            musica.play();
+        }
     }
 
     @Override
     public void hide() {
-        dispose();
+        // Não dispose aqui porque pode estar pausado
     }
 
     @Override
