@@ -326,7 +326,7 @@ public class GameScreen implements Screen {
         
         if (combo > 0) {
             font.setColor(Color.WHITE);
-            font.draw(batch, "" + combo, 20, (V_HEIGHT - 70));
+            font.draw(batch, "" + combo, 20, (V_HEIGHT - 65));
         }
 
         layout.setText(font, "ESC para Pausar");
