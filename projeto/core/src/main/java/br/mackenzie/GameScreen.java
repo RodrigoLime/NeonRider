@@ -17,7 +17,7 @@ import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.TimeUtils;
 
 public class GameScreen implements Screen {
-    
+
     // --- Classes internas Note e Particle (Formatadas) ---
     private static class Note {
         enum NoteType { LEFT, RIGHT }
@@ -35,7 +35,7 @@ public class GameScreen implements Screen {
     private static class Particle {
         float x, y, velX, velY, life, maxLife;
         Color color;
-        private static final float GRAVITY = -400f; 
+        private static final float GRAVITY = -400f;
         public Particle(float x, float y, float velX, float velY, float life, Color color) {
             this.x = x;
             this.y = y;
@@ -59,33 +59,29 @@ public class GameScreen implements Screen {
     // --- Variáveis da Classe ---
     private final Main game;
     private final GameSettings settings;
+    private final Player player;
     private final SpriteBatch batch;
     private final BitmapFont font;
     private final ShapeRenderer shapeRenderer;
     private Music musica;
-    private Texture motoTexture, roadTexture, sceneryTexture;
+    private Texture motoIdleTexture, motoLeftTexture, motoRightTexture;
+    private Texture roadTexture, sceneryTexture;
     private float laneLeftX, laneRightX, laneWidth = 50;
     private Rectangle hitZoneLeft, hitZoneRight;
     private float hitZoneY = 100;
     private Array<Note> notes;
-    private Array<Particle> particles; 
+    private Array<Particle> particles;
     private long lastNoteTime;
     private float noteSpeed = 300.0f;
     private long spawnInterval;
     private float roadScrollY = 0, sceneryScrollY = 0;
-    private float scenerySpeedMultiplier = 0.2f; 
-    private int score = 0, combo = 0, multiplier = 1;
-    private final int COMBO_THRESHOLD = 10, MAX_MULTIPLIER = 4, POINTS_PER_NOTE = 10;
-    private int hitsSinceLastMultiplier = 0; 
-    private String hitFeedback = "";
-    private float feedbackTimer = 0;
-    private Color hitFeedbackColor = Color.WHITE;
+    private float scenerySpeedMultiplier = 0.2f;
     private int noteSpawnCount = 0;
     private final float V_WIDTH = SettingsScreen.GAME_WIDTH;
     private final float V_HEIGHT = SettingsScreen.GAME_HEIGHT;
-    private GlyphLayout layout; 
+    private GlyphLayout layout;
     private long lastTapTime = 0;
-    private final long DOUBLE_TAP_TIME = 250; 
+    private final long DOUBLE_TAP_TIME = 250;
 
     // --- Construtor ---
     public GameScreen(final Main game) {
@@ -95,40 +91,53 @@ public class GameScreen implements Screen {
         this.font = game.font;
         this.shapeRenderer = game.shapeRenderer;
         this.spawnInterval = settings.difficulty.spawnInterval;
-        
-        this.layout = new GlyphLayout(); 
+
+        this.layout = new GlyphLayout();
+
+        try {
+            // Carrega todas as 3 texturas
+            motoIdleTexture = new Texture(Gdx.files.internal("neon_rider_idle.png"));
+            motoLeftTexture = new Texture(Gdx.files.internal("neon_rider_left.png"));
+            motoRightTexture = new Texture(Gdx.files.internal("neon_rider_right.png"));
+
+            // Filtros (opcional, mas bom)
+            motoIdleTexture.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
+            motoLeftTexture.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
+            motoRightTexture.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
+
+        } catch (Exception e) {
+            Gdx.app.error("Texture", "Nao foi possivel carregar uma das texturas da moto", e);
+        }
+
 
         try {
             sceneryTexture = new Texture(Gdx.files.internal("background-1.png"));
             sceneryTexture.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
         } catch (Exception e) { Gdx.app.error("Texture", "Nao foi possivel carregar background-1.png", e); }
-        
+
         try {
             roadTexture = new Texture(Gdx.files.internal("neon_road.png"));
             roadTexture.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
         } catch (Exception e) { Gdx.app.error("Texture", "Nao foi possivel carregar neon_road.png", e); }
-        
-        try {
-            motoTexture = new Texture(Gdx.files.internal("neon_rider_idle.png"));
-            motoTexture.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
-        } catch (Exception e) { Gdx.app.error("Texture", "Nao foi possivel carregar neon_rider_idle.png", e); }
-        
+
         try {
             musica = Gdx.audio.newMusic(Gdx.files.internal("music.ogg"));
             musica.setLooping(true);
             musica.setVolume(settings.volume);
         } catch (Exception e) { Gdx.app.error("Audio", "Nao foi possivel carregar musica.ogg", e); }
 
+        this.player = new Player(motoIdleTexture, motoLeftTexture, motoRightTexture);
+
         laneLeftX = V_WIDTH / 2f - laneWidth * 1.5f;
         laneRightX = V_WIDTH / 2f + laneWidth * 0.5f;
         hitZoneLeft = new Rectangle(laneLeftX, hitZoneY, laneWidth, 20);
         hitZoneRight = new Rectangle(laneRightX, hitZoneY, laneWidth, 20);
-        
+
         notes = new Array<>();
-        particles = new Array<>(); 
+        particles = new Array<>();
         lastNoteTime = TimeUtils.millis();
     }
-    
+
     @Override
     public void show() {
         resumeMusic();
@@ -154,12 +163,6 @@ public class GameScreen implements Screen {
         }
     }
 
-    private void setHitFeedback(String text, Color color) {
-        this.hitFeedback = text;
-        this.hitFeedbackColor = color;
-        this.feedbackTimer = 0.5f;
-    }
-
     private void spawnNote() {
         Note.NoteType type = (noteSpawnCount % 2 == 0) ? Note.NoteType.LEFT : Note.NoteType.RIGHT;
         float x = (type == Note.NoteType.LEFT) ? laneLeftX : laneRightX;
@@ -177,25 +180,21 @@ public class GameScreen implements Screen {
             particles.add(new Particle(x, y, velX, velY, life, color));
         }
     }
-    
+
     private void updateLogic(float delta) {
-        if (feedbackTimer > 0) {
-            feedbackTimer -= delta;
-            if (feedbackTimer <= 0) hitFeedback = "";
-        }
+        player.update(delta);
+
         if (TimeUtils.millis() - lastNoteTime > spawnInterval) {
             spawnNote();
         }
+
         for (int i = notes.size - 1; i >= 0; i--) {
             Note note = notes.get(i);
             note.update(delta, noteSpeed);
             if (note.rect.y < hitZoneY - note.rect.height && !note.hit) {
-                score = (score >= 5) ? score - 5 : 0;
-                combo = 0;
-                multiplier = 1;
-                hitsSinceLastMultiplier = 0;
-                setHitFeedback("PERDEU!", Color.GRAY);
-                notes.removeIndex(i);
+               player.processMiss(true);
+
+               notes.removeIndex(i);
             }
         }
         for (int i = particles.size - 1; i >= 0; i--) {
@@ -203,14 +202,14 @@ public class GameScreen implements Screen {
             p.update(delta);
             if (p.isDead()) particles.removeIndex(i);
         }
-        
+
         handleInput();
-        
+
         if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
             pauseMusic();
             game.setScreen(new PauseMenuScreen(game, this));
         }
-        
+
         roadScrollY += delta * noteSpeed;
         sceneryScrollY += delta * noteSpeed * scenerySpeedMultiplier;
     }
@@ -221,7 +220,7 @@ public class GameScreen implements Screen {
         if (game.settings.screenMode == GameSettings.ScreenMode.WINDOWED) {
             game.settings.screenMode = GameSettings.ScreenMode.BORDERLESS;
             game.windowService.setBorderless();
-            
+
         } else if (game.settings.screenMode == GameSettings.ScreenMode.BORDERLESS) {
             game.settings.screenMode = GameSettings.ScreenMode.WINDOWED;
             game.windowService.setWindowed();
@@ -232,9 +231,11 @@ public class GameScreen implements Screen {
 
     private void handleInput() {
         if (Gdx.input.isKeyJustPressed(settings.keyLeft)) {
+            player.setPressedState(true);
             checkHit(Note.NoteType.LEFT, hitZoneLeft);
         }
         if (Gdx.input.isKeyJustPressed(settings.keyRight)) {
+            player.setPressedState(false);
             checkHit(Note.NoteType.RIGHT, hitZoneRight);
         }
 
@@ -253,16 +254,7 @@ public class GameScreen implements Screen {
             Note note = notes.get(i);
             if (note.type == type && !note.hit) {
                 if (note.rect.overlaps(hitZone)) {
-                    combo++;
-                    hitsSinceLastMultiplier++;
-                    if (hitsSinceLastMultiplier >= COMBO_THRESHOLD && multiplier < MAX_MULTIPLIER) {
-                        multiplier++;
-                        hitsSinceLastMultiplier = 0;
-                    } else if (multiplier == MAX_MULTIPLIER) {
-                        hitsSinceLastMultiplier = Math.min(hitsSinceLastMultiplier, COMBO_THRESHOLD);
-                    }
-                    score += (POINTS_PER_NOTE * multiplier);
-                    setHitFeedback("ACERTOU!", Color.GREEN);
+                    player.processHit();
                     Color particleColor = (note.type == Note.NoteType.LEFT) ? Color.CYAN : Color.MAGENTA;
                     float centerX = note.rect.x + note.rect.width / 2;
                     float centerY = note.rect.y + note.rect.height / 2;
@@ -275,18 +267,14 @@ public class GameScreen implements Screen {
             }
         }
         if (!hitSomething) {
-            score = (score >= 2) ? score - 2 : 0;
-            combo = 0;
-            multiplier = 1;
-            hitsSinceLastMultiplier = 0;
-            setHitFeedback("ERROU!", Color.RED);
+            player.processMiss(false);
         }
     }
 
     @Override
-    public void render(float delta) { 
-        updateLogic(delta); 
-        renderGameOnly(); 
+    public void render(float delta) {
+        updateLogic(delta);
+        renderGameOnly();
     }
 
     public void renderGameOnly() {
@@ -294,7 +282,7 @@ public class GameScreen implements Screen {
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
         batch.begin();
-        
+
         if (sceneryTexture != null) {
             float texWidth = sceneryTexture.getWidth(), texHeight = sceneryTexture.getHeight();
             float scale = V_WIDTH / texWidth;
@@ -313,67 +301,72 @@ public class GameScreen implements Screen {
             batch.draw(roadTexture, roadVisualX, currentY, roadVisualWidth, roadTexture.getHeight());
             batch.draw(roadTexture, roadVisualX, currentY + roadTexture.getHeight(), roadVisualWidth, roadTexture.getHeight());
         }
-        if (motoTexture != null) {
-            batch.draw(motoTexture, (V_WIDTH / 2f) - (motoTexture.getWidth() / 2f) , 10);
+
+        Texture currentMotoTexture = player.getCurrentTexture();
+        if (currentMotoTexture != null) {
+            batch.draw(currentMotoTexture,
+                (V_WIDTH / 2f) - (currentMotoTexture.getWidth() / 2f),
+                10);
         }
 
         font.setColor(Color.WHITE);
-        font.draw(batch, "Score: " + score, 20, (V_HEIGHT - 20));
-        
-        if (multiplier > 1) font.setColor(Color.YELLOW);
+        font.draw(batch, "Score: " + player.getScore(), 20, (V_HEIGHT - 20));
+
+        if (player.getMultiplier() > 1) font.setColor(Color.YELLOW);
         else font.setColor(Color.WHITE);
-        font.draw(batch, "x" + multiplier, 20, (V_HEIGHT - 45));
-        
-        if (combo > 0) {
+        font.draw(batch, "x" + player.getMultiplier(), 20, (V_HEIGHT - 45));
+
+        if (player.getCombo() > 0) {
             font.setColor(Color.WHITE);
-            font.draw(batch, "" + combo, 20, (V_HEIGHT - 65));
+            font.draw(batch, "" + player.getCombo(), 20, (V_HEIGHT - 65));
         }
 
         layout.setText(font, "ESC para Pausar");
-        font.draw(batch, layout, V_WIDTH - layout.width - 20f, V_HEIGHT - 20f); 
+        font.draw(batch, layout, V_WIDTH - layout.width - 20f, V_HEIGHT - 20f);
 
-        if (feedbackTimer > 0 && !hitFeedback.isEmpty()) {
-            font.setColor(hitFeedbackColor);
-            layout.setText(font, hitFeedback);
+        if (player.isFeedbackActive() && !player.getHitFeedback().isEmpty()) { // <-- MUDANÇA
+            font.setColor(player.getFeedbackColor()); // <-- MUDANÇA
+            layout.setText(font, player.getHitFeedback()); // <-- MUDANÇA
             font.draw(batch, layout, (V_WIDTH - layout.width) / 2f, 150);
         }
-        
         batch.end();
 
         Gdx.gl.glEnable(GL20.GL_BLEND);
         Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
-        
+
         shapeRenderer.setColor(0, 1, 0, 0.3f);
         shapeRenderer.rect(hitZoneLeft.x, hitZoneLeft.y, hitZoneLeft.width, hitZoneLeft.height);
         shapeRenderer.setColor(1, 0, 0, 0.3f);
         shapeRenderer.rect(hitZoneRight.x, hitZoneRight.y, hitZoneRight.width, hitZoneRight.height);
-        
+
         for (Note note : notes) {
             if (note.hit) continue;
             shapeRenderer.setColor((note.type == Note.NoteType.LEFT) ? Color.CYAN : Color.MAGENTA);
             shapeRenderer.rect(note.rect.x, note.rect.y, note.rect.width, note.rect.height);
         }
-        
+
         for (Particle p : particles) {
             float alpha = p.life / p.maxLife;
             shapeRenderer.setColor(p.color.r, p.color.g, p.color.b, alpha);
             shapeRenderer.rect(p.x - 1, p.y - 1, 3, 3);
         }
-        
-        if (multiplier < MAX_MULTIPLIER) {
+
+        if (player.getMultiplier() < Player.MAX_MULTIPLIER) { // <-- MUDANÇA
             float barX = 20, barY = V_HEIGHT - 90, barWidth = 80, barHeight = 8;
             shapeRenderer.setColor(Color.DARK_GRAY);
             shapeRenderer.rect(barX, barY, barWidth, barHeight);
-            float progress = (float)hitsSinceLastMultiplier / COMBO_THRESHOLD;
-            shapeRenderer.setColor(Color.LIME); 
+
+            float progress = player.getMultiplierProgress(); // <-- MUDANÇA
+
+            shapeRenderer.setColor(Color.LIME);
             shapeRenderer.rect(barX, barY, barWidth * progress, barHeight);
         }
-        
+
         shapeRenderer.end();
         Gdx.gl.glDisable(GL20.GL_BLEND);
     }
-    
+
     @Override
     public void hide() {
     }
@@ -381,21 +374,23 @@ public class GameScreen implements Screen {
     @Override
     public void dispose() {
         if (musica != null) musica.dispose();
-        if (motoTexture != null) motoTexture.dispose();
+        if (motoIdleTexture != null) motoIdleTexture.dispose();
+        if (motoLeftTexture != null) motoLeftTexture.dispose();
+        if (motoRightTexture != null) motoRightTexture.dispose();
         if (roadTexture != null) roadTexture.dispose();
         if (sceneryTexture != null) sceneryTexture.dispose();
     }
-    
+
     @Override
     public void resize(int width, int height) {
     }
-    
+
     @Override
     public void pause() {
         pauseMusic();
         game.setScreen(new PauseMenuScreen(game, this));
     }
-    
+
     @Override
     public void resume() {
     }
