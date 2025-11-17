@@ -18,7 +18,6 @@ import com.badlogic.gdx.utils.TimeUtils;
 
 public class GameScreen implements Screen {
 
-    // --- Classes internas Note e Particle (Formatadas) ---
     private static class Note {
         enum NoteType { LEFT, RIGHT }
         Rectangle rect;
@@ -56,7 +55,6 @@ public class GameScreen implements Screen {
         }
     }
 
-    // --- Variáveis da Classe ---
     private final Main game;
     private final GameSettings settings;
     private final Player player;
@@ -82,8 +80,9 @@ public class GameScreen implements Screen {
     private GlyphLayout layout;
     private long lastTapTime = 0;
     private final long DOUBLE_TAP_TIME = 250;
+    private boolean gameFinished = false; // Flag para parar o jogo
 
-    // --- Construtor ---
+  
     public GameScreen(final Main game) {
         this.game = game;
         this.settings = game.settings;
@@ -95,20 +94,15 @@ public class GameScreen implements Screen {
         this.layout = new GlyphLayout();
 
         try {
-            // Carrega todas as 3 texturas
             motoIdleTexture = new Texture(Gdx.files.internal("neon_rider_idle.png"));
             motoLeftTexture = new Texture(Gdx.files.internal("neon_rider_left.png"));
             motoRightTexture = new Texture(Gdx.files.internal("neon_rider_right.png"));
-
-            // Filtros (opcional, mas bom)
             motoIdleTexture.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
             motoLeftTexture.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
             motoRightTexture.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
-
         } catch (Exception e) {
             Gdx.app.error("Texture", "Nao foi possivel carregar uma das texturas da moto", e);
         }
-
 
         try {
             sceneryTexture = new Texture(Gdx.files.internal("background-1.png"));
@@ -120,11 +114,16 @@ public class GameScreen implements Screen {
             roadTexture.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
         } catch (Exception e) { Gdx.app.error("Texture", "Nao foi possivel carregar neon_road.png", e); }
 
+       
         try {
-            musica = Gdx.audio.newMusic(Gdx.files.internal("music.ogg"));
-            musica.setLooping(true);
+           
+            musica = Gdx.audio.newMusic(Gdx.files.internal(settings.difficulty.musicFile));
+            musica.setLooping(false); 
             musica.setVolume(settings.volume);
-        } catch (Exception e) { Gdx.app.error("Audio", "Nao foi possivel carregar musica.ogg", e); }
+        } catch (Exception e) { 
+            Gdx.app.error("Audio", "Nao foi possivel carregar " + settings.difficulty.musicFile, e); 
+        }
+       
 
         this.player = new Player(motoIdleTexture, motoLeftTexture, motoRightTexture);
 
@@ -182,11 +181,27 @@ public class GameScreen implements Screen {
     }
 
     private void updateLogic(float delta) {
+      
+        if (gameFinished) return;
+
         player.update(delta);
 
-        if (TimeUtils.millis() - lastNoteTime > spawnInterval) {
+ -
+        float currentMusicTime = 0;
+        if (musica != null) {
+             currentMusicTime = musica.getPosition(); 
+        }
+
+       
+        boolean isSpawningTime = currentMusicTime >= settings.difficulty.musicStartTime &&
+                                 currentMusicTime <= settings.difficulty.musicEndTime;
+
+      
+        if (musica != null && musica.isPlaying() && isSpawningTime && TimeUtils.millis() - lastNoteTime > spawnInterval) {
             spawnNote();
         }
+      
+
 
         for (int i = notes.size - 1; i >= 0; i--) {
             Note note = notes.get(i);
@@ -212,11 +227,30 @@ public class GameScreen implements Screen {
 
         roadScrollY += delta * noteSpeed;
         sceneryScrollY += delta * noteSpeed * scenerySpeedMultiplier;
+
+        boolean songFinished = false;
+        if (musica != null) {
+            songFinished = !musica.isPlaying() && currentMusicTime > 0;
+        } else {
+            
+            songFinished = true; 
+        }
+
+        if (songFinished && notes.isEmpty) {
+            gameFinished = true;
+            
+          
+            game.setScreen(new ResultsScreen(game, player.getScore(), settings.difficulty));
+            
+            dispose();
+            return;  
+        }
+       
     }
 
-    // --- INÍCIO DA MUDANÇA ---
+
     private void toggleScreenMode() {
-        // Usa o WindowService que está no Main (game)
+      
         if (game.settings.screenMode == GameSettings.ScreenMode.WINDOWED) {
             game.settings.screenMode = GameSettings.ScreenMode.BORDERLESS;
             game.windowService.setBorderless();
@@ -225,9 +259,9 @@ public class GameScreen implements Screen {
             game.settings.screenMode = GameSettings.ScreenMode.WINDOWED;
             game.windowService.setWindowed();
         }
-        // Não faz nada se estiver em FULLSCREEN
+       
     }
-    // --- FIM DA MUDANÇA ---
+
 
     private void handleInput() {
         if (Gdx.input.isKeyJustPressed(settings.keyLeft)) {
@@ -273,8 +307,12 @@ public class GameScreen implements Screen {
 
     @Override
     public void render(float delta) {
+    
         updateLogic(delta);
-        renderGameOnly();
+        if (!gameFinished) {
+            renderGameOnly();
+        }
+      
     }
 
     public void renderGameOnly() {
@@ -324,9 +362,9 @@ public class GameScreen implements Screen {
         layout.setText(font, "ESC para Pausar");
         font.draw(batch, layout, V_WIDTH - layout.width - 20f, V_HEIGHT - 20f);
 
-        if (player.isFeedbackActive() && !player.getHitFeedback().isEmpty()) { // <-- MUDANÇA
-            font.setColor(player.getFeedbackColor()); // <-- MUDANÇA
-            layout.setText(font, player.getHitFeedback()); // <-- MUDANÇA
+        if (player.isFeedbackActive() && !player.getHitFeedback().isEmpty()) { 
+            font.setColor(player.getFeedbackColor()); 
+            layout.setText(font, player.getHitFeedback()); 
             font.draw(batch, layout, (V_WIDTH - layout.width) / 2f, 150);
         }
         batch.end();
@@ -352,12 +390,12 @@ public class GameScreen implements Screen {
             shapeRenderer.rect(p.x - 1, p.y - 1, 3, 3);
         }
 
-        if (player.getMultiplier() < Player.MAX_MULTIPLIER) { // <-- MUDANÇA
+        if (player.getMultiplier() < Player.MAX_MULTIPLIER) {
             float barX = 20, barY = V_HEIGHT - 90, barWidth = 80, barHeight = 8;
             shapeRenderer.setColor(Color.DARK_GRAY);
             shapeRenderer.rect(barX, barY, barWidth, barHeight);
 
-            float progress = player.getMultiplierProgress(); // <-- MUDANÇA
+            float progress = player.getMultiplierProgress(); 
 
             shapeRenderer.setColor(Color.LIME);
             shapeRenderer.rect(barX, barY, barWidth * progress, barHeight);
