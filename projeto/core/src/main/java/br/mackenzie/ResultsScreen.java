@@ -33,8 +33,17 @@ public class ResultsScreen implements Screen {
         float buttonWidth = 200;
         float buttonHeight = 50;
         float x = (GAME_WIDTH / 2f) - (buttonWidth / 2f);
-        
+
         backButton = new Rectangle(x, 100, buttonWidth, buttonHeight);
+    }
+
+    private String getDifficultyText(GameSettings.Difficulty difficulty) {
+        switch (difficulty) {
+            case EASY: return "Nível 1";
+            case MEDIUM: return "Nível 2";
+            case HARD: return "Nível 3";
+            default: return "Nível 1";
+        }
     }
 
     @Override
@@ -58,7 +67,7 @@ public class ResultsScreen implements Screen {
 
         // Dificuldade
         // (Usando .name() para converter o enum em String)
-        layout.setText(game.font, "Dificuldade: " + difficulty.name());
+        layout.setText(game.font, "Dificuldade: " + getDifficultyText(difficulty));
         game.font.draw(game.batch, layout, (GAME_WIDTH - layout.width) / 2f, 350);
 
         // Pontuação

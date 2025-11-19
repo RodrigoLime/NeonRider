@@ -343,10 +343,6 @@ public class GameScreen implements Screen {
                         quality = Player.HitQuality.GOOD;
                     }
 
-                    // Debug (pode remover depois)
-                    System.out.println("Hit! Distância: " + String.format("%.1f", distance) +
-                        "px → " + quality);
-
                     player.processHit(quality);
 
                     // Partículas com cor baseada na qualidade
@@ -449,6 +445,11 @@ public class GameScreen implements Screen {
 
         for (Note note : notes) {
             if (note.hit) continue;
+            // Desenha borda branca
+            shapeRenderer.setColor(Color.WHITE);
+            shapeRenderer.rect(note.rect.x - 2, note.rect.y - 2, note.rect.width + 4, note.rect.height + 4);
+
+            // Desenha a nota por cima
             shapeRenderer.setColor((note.type == Note.NoteType.LEFT) ? Color.CYAN : Color.MAGENTA);
             shapeRenderer.rect(note.rect.x, note.rect.y, note.rect.width, note.rect.height);
         }
