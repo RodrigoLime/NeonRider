@@ -17,13 +17,13 @@ public class PauseMenuScreen implements Screen {
     private final GameScreen gameScreen; // Referência para o jogo pausado
     private int ignoreInputFrames = 3;
 
-    private Rectangle continueButton;
-    private Rectangle restartButton;
-    private Rectangle settingsButton;
-    private Rectangle exitButton;
+    private final Rectangle continueButton;
+    private final Rectangle restartButton;
+    private final Rectangle settingsButton;
+    private final Rectangle exitButton;
 
-    private Vector3 touchPoint;
-    private GlyphLayout layout; // Para medir e centralizar texto
+    private final Vector3 touchPoint;
+    private final GlyphLayout layout; // Para medir e centralizar texto
 
     public PauseMenuScreen(final Main game, final GameScreen gameScreen) {
         this.game = game;
@@ -72,13 +72,13 @@ public class PauseMenuScreen implements Screen {
         // --- Texto Centralizado com GlyphLayout ---
         game.batch.begin();
         game.font.setColor(Color.WHITE);
-        
+
         // Título "PAUSE"
         layout.setText(game.font, "PAUSE");
         game.font.draw(game.batch, layout,
                 (GAME_WIDTH - layout.width) / 2f,
                 420f);
-        
+
         // Centraliza "Continuar"
         layout.setText(game.font, "Continuar");
         game.font.draw(game.batch, layout,
@@ -90,9 +90,9 @@ public class PauseMenuScreen implements Screen {
         game.font.draw(game.batch, layout,
                 restartButton.x + (restartButton.width - layout.width) / 2f,
                 restartButton.y + (restartButton.height + layout.height) / 2f);
-        
-        // Centraliza "Configuracoes"
-        layout.setText(game.font, "Configuracoes");
+
+        // Centraliza "Configurações"
+        layout.setText(game.font, "Configurações");
         game.font.draw(game.batch, layout,
                 settingsButton.x + (settingsButton.width - layout.width) / 2f,
                 settingsButton.y + (settingsButton.height + layout.height) / 2f);
@@ -102,7 +102,7 @@ public class PauseMenuScreen implements Screen {
         game.font.draw(game.batch, layout,
                 exitButton.x + (exitButton.width - layout.width) / 2f,
                 exitButton.y + (exitButton.height + layout.height) / 2f);
-        
+
         game.batch.end();
         // --- FIM DA MUDANÇA ---
 
@@ -118,24 +118,27 @@ public class PauseMenuScreen implements Screen {
 
             if (continueButton.contains(touchPoint.x, touchPoint.y)) {
                 // Volta para o jogo e retoma a música
+                assert gameScreen != null;
                 gameScreen.resumeMusic();
                 game.setScreen(gameScreen);
                 dispose();
-                
+
             } else if (restartButton.contains(touchPoint.x, touchPoint.y)) {
                 // Reinicia o jogo com a mesma dificuldade
                 game.setScreen(new GameScreen(game));
+                assert gameScreen != null;
                 gameScreen.dispose();
                 dispose();
-                
+
             } else if (settingsButton.contains(touchPoint.x, touchPoint.y)) {
                 // Vai para configurações (passando referência deste pause menu)
                 game.setScreen(new SettingsScreen(game, true, this, gameScreen));
                 dispose();
-                
+
             } else if (exitButton.contains(touchPoint.x, touchPoint.y)) {
                 // Volta para o menu principal
                 game.setScreen(new MainMenuScreen(game));
+                assert gameScreen != null;
                 gameScreen.dispose();
                 dispose();
             }

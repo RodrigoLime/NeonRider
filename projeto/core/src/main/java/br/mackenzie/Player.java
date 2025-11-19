@@ -5,18 +5,29 @@ import com.badlogic.gdx.graphics.Texture;
 
 public class Player {
 
-    // --- Constants ---
+    public enum HitQuality {
+        PERFECT,
+        GOOD,
+        MISS
+    }
+
+    // Constantes
     public static final int COMBO_THRESHOLD = 10;
     public static final int MAX_MULTIPLIER = 4;
     public static final int POINTS_PER_NOTE = 10;
 
     private static final float STATE_RESET_TIME = 0.1f;
 
+    // Janelas de timing em pixels
+    private static final float PERFECT_WINDOW = 30f;  // ±30px = PERFEITO
+    private static final float GOOD_WINDOW = 50f;     // ±50px = BOM
+
     private enum PlayerState {
         IDLE,
         LEFT,
         RIGHT
     }
+
 
     // --- Player State ---
     private int score = 0;
@@ -26,9 +37,9 @@ public class Player {
 
     private PlayerState visualState = PlayerState.IDLE;
     private float stateTimer = 0;
-    private Texture idleTexture;
-    private Texture leftTexture;
-    private Texture rightTexture;
+    private final Texture idleTexture;
+    private final Texture leftTexture;
+    private final Texture rightTexture;
 
     // --- Feedback State ---
     private String hitFeedback = "";
@@ -64,7 +75,7 @@ public class Player {
     /**
      * Call this when the player successfully hits a note.
      */
-    public void processHit() {
+    public void processHit(HitQuality quality) {
         combo++;
         hitsSinceLastMultiplier++;
         if (hitsSinceLastMultiplier >= COMBO_THRESHOLD && multiplier < MAX_MULTIPLIER) {
@@ -73,8 +84,26 @@ public class Player {
         } else if (multiplier == MAX_MULTIPLIER) {
             hitsSinceLastMultiplier = Math.min(hitsSinceLastMultiplier, COMBO_THRESHOLD);
         }
-        score += (POINTS_PER_NOTE * multiplier);
-        setHitFeedback("ACERTOU!", Color.GREEN);
+
+        // Pontuação baseada na qualidade
+        int points = POINTS_PER_NOTE * multiplier;
+        switch (quality) {
+            case PERFECT:
+                points = (int)(points * 1.2f);  // +20% de bônus
+                setHitFeedback("PERFEITO!", Color.GREEN);
+                break;
+            case GOOD:
+                // Pontos normais
+                setHitFeedback("BOM!", Color.YELLOW);
+                break;
+            case MISS:
+                // Não deveria chegar aqui, mas por segurança
+                points = 0;
+                setHitFeedback("ERROU!", Color.RED);
+                break;
+        }
+
+        score += points;
     }
 
     /**

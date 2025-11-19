@@ -62,16 +62,21 @@ public class GameScreen implements Screen {
     private final BitmapFont font;
     private final ShapeRenderer shapeRenderer;
     private Music musica;
+
     private Texture motoIdleTexture, motoLeftTexture, motoRightTexture;
     private Texture roadTexture, sceneryTexture;
+
     private float laneLeftX, laneRightX, laneWidth = 50;
     private Rectangle hitZoneLeft, hitZoneRight;
     private float hitZoneY = 100;
+
     private Array<Note> notes;
     private Array<Particle> particles;
     private long lastNoteTime;
     private float noteSpeed = 300.0f;
-    private long spawnInterval;
+    private float spawnInterval;
+    private float noteTravelTime;
+
     private float roadScrollY = 0, sceneryScrollY = 0;
     private float scenerySpeedMultiplier = 0.2f;
     private int noteSpawnCount = 0;
@@ -80,9 +85,16 @@ public class GameScreen implements Screen {
     private GlyphLayout layout;
     private long lastTapTime = 0;
     private final long DOUBLE_TAP_TIME = 250;
-    private boolean gameFinished = false; // Flag para parar o jogo
+    private boolean gameStarted = false;
+    private boolean gameFinished = false;
 
-  
+    private boolean musicFinished = false;
+    private float endGameTimer = 0f;
+    private static final float END_GAME_DELAY = 3.0f;
+    private float totalMusicTime = 0f;  // Tempo acumulado total
+
+
+
     public GameScreen(final Main game) {
         this.game = game;
         this.settings = game.settings;
@@ -92,6 +104,10 @@ public class GameScreen implements Screen {
         this.spawnInterval = settings.difficulty.spawnInterval;
 
         this.layout = new GlyphLayout();
+
+        // Calcula tempo de viagem da nota
+        float distance = V_HEIGHT - hitZoneY;  // 480 - 100 = 380
+        noteTravelTime = distance / noteSpeed;  // 380 / 300 = 1.27 segundos
 
         try {
             motoIdleTexture = new Texture(Gdx.files.internal("neon_rider_idle.png"));
@@ -105,25 +121,37 @@ public class GameScreen implements Screen {
         }
 
         try {
-            sceneryTexture = new Texture(Gdx.files.internal("background-1.png"));
+            sceneryTexture = new Texture(Gdx.files.internal(settings.difficulty.backgroundFile));
             sceneryTexture.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
-        } catch (Exception e) { Gdx.app.error("Texture", "Nao foi possivel carregar background-1.png", e); }
+        } catch (Exception e) {
+            Gdx.app.error("Texture", "Nao foi possivel carregar " + settings.difficulty.backgroundFile, e);
+        }
 
         try {
             roadTexture = new Texture(Gdx.files.internal("neon_road.png"));
             roadTexture.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
         } catch (Exception e) { Gdx.app.error("Texture", "Nao foi possivel carregar neon_road.png", e); }
 
-       
+
         try {
-           
             musica = Gdx.audio.newMusic(Gdx.files.internal(settings.difficulty.musicFile));
-            musica.setLooping(false); 
+            musica.setLooping(settings.difficulty.shouldLoop);  // EASY = true, outras = false
             musica.setVolume(settings.volume);
-        } catch (Exception e) { 
-            Gdx.app.error("Audio", "Nao foi possivel carregar " + settings.difficulty.musicFile, e); 
+
+            // Listener apenas para músicas SEM loop (MEDIUM e HARD)
+            if (!settings.difficulty.shouldLoop) {
+                musica.setOnCompletionListener(new Music.OnCompletionListener() {
+                    @Override
+                    public void onCompletion(Music music) {
+                        musicFinished = true;
+                    }
+                });
+            }
+
+        } catch (Exception e) {
+            Gdx.app.error("Audio", "Nao foi possivel carregar " + settings.difficulty.musicFile, e);
         }
-       
+
 
         this.player = new Player(motoIdleTexture, motoLeftTexture, motoRightTexture);
 
@@ -181,37 +209,50 @@ public class GameScreen implements Screen {
     }
 
     private void updateLogic(float delta) {
-      
+
         if (gameFinished) return;
 
         player.update(delta);
 
- -
         float currentMusicTime = 0;
         if (musica != null) {
-             currentMusicTime = musica.getPosition(); 
+             currentMusicTime = musica.getPosition();
+             totalMusicTime += delta; // tempo real tocado
         }
 
-       
+        // Musica com loop (easy)
+        if (settings.difficulty.shouldLoop && totalMusicTime >= 120.0f && !musicFinished) {
+            musicFinished = true;
+        }
+
+
+        // Ajusta tempo da nota para beat cair no tempo
+        float adjustedMusicTime = currentMusicTime + noteTravelTime;
+
         boolean isSpawningTime = currentMusicTime >= settings.difficulty.musicStartTime &&
                                  currentMusicTime <= settings.difficulty.musicEndTime;
 
-      
-        if (musica != null && musica.isPlaying() && isSpawningTime && TimeUtils.millis() - lastNoteTime > spawnInterval) {
+
+        // Para EASY: spawn enquanto totalMusicTime < 120s
+        // Para MEDIUM/HARD: spawn até musicEndTime
+        boolean shouldSpawn = musica != null && musica.isPlaying() && !musicFinished && isSpawningTime;
+
+        if (shouldSpawn && TimeUtils.millis() - lastNoteTime > spawnInterval) {
             spawnNote();
+            gameStarted = true;
         }
-      
 
 
+        // Atualiza as notas existentes
         for (int i = notes.size - 1; i >= 0; i--) {
             Note note = notes.get(i);
             note.update(delta, noteSpeed);
             if (note.rect.y < hitZoneY - note.rect.height && !note.hit) {
-               player.processMiss(true);
-
-               notes.removeIndex(i);
+                player.processMiss(true);
+                notes.removeIndex(i);
             }
         }
+
         for (int i = particles.size - 1; i >= 0; i--) {
             Particle p = particles.get(i);
             p.update(delta);
@@ -228,29 +269,24 @@ public class GameScreen implements Screen {
         roadScrollY += delta * noteSpeed;
         sceneryScrollY += delta * noteSpeed * scenerySpeedMultiplier;
 
-        boolean songFinished = false;
-        if (musica != null) {
-            songFinished = !musica.isPlaying() && currentMusicTime > 0;
-        } else {
-            
-            songFinished = true; 
+        // Lógica de fim de jogo
+        if (musicFinished && gameStarted) {
+            endGameTimer += delta;
+
+            // Espera 3 segundos OU até todas as notas acabarem
+            if (endGameTimer >= END_GAME_DELAY || notes.isEmpty()) {
+                gameFinished = true;
+                game.setScreen(new ResultsScreen(game, player.getScore(), settings.difficulty));
+                dispose();
+                return;
+            }
         }
 
-        if (songFinished && notes.isEmpty) {
-            gameFinished = true;
-            
-          
-            game.setScreen(new ResultsScreen(game, player.getScore(), settings.difficulty));
-            
-            dispose();
-            return;  
-        }
-       
     }
 
 
     private void toggleScreenMode() {
-      
+
         if (game.settings.screenMode == GameSettings.ScreenMode.WINDOWED) {
             game.settings.screenMode = GameSettings.ScreenMode.BORDERLESS;
             game.windowService.setBorderless();
@@ -259,7 +295,7 @@ public class GameScreen implements Screen {
             game.settings.screenMode = GameSettings.ScreenMode.WINDOWED;
             game.windowService.setWindowed();
         }
-       
+
     }
 
 
@@ -284,15 +320,47 @@ public class GameScreen implements Screen {
 
     private void checkHit(Note.NoteType type, Rectangle hitZone) {
         boolean hitSomething = false;
+
         for (int i = notes.size - 1; i >= 0; i--) {
             Note note = notes.get(i);
+
             if (note.type == type && !note.hit) {
                 if (note.rect.overlaps(hitZone)) {
-                    player.processHit();
-                    Color particleColor = (note.type == Note.NoteType.LEFT) ? Color.CYAN : Color.MAGENTA;
+
+                    // Calcula precisão do hit
+                    float noteCenterY = note.rect.y + note.rect.height / 2f;
+                    float hitZoneCenterY = hitZone.y + hitZone.height / 2f;
+                    float distance = Math.abs(noteCenterY - hitZoneCenterY);
+
+                    // Determina qualidade baseado na distância em pixels
+                    Player.HitQuality quality;
+                    if (distance <= 10f) {  // ±10px do centro = PERFEITO
+                        quality = Player.HitQuality.PERFECT;
+                    } else if (distance <= 20f) {  // ±20px do centro = BOM
+                        quality = Player.HitQuality.GOOD;
+                    } else {
+                        // Hit na borda da hitzone = BOM também
+                        quality = Player.HitQuality.GOOD;
+                    }
+
+                    // Debug (pode remover depois)
+                    System.out.println("Hit! Distância: " + String.format("%.1f", distance) +
+                        "px → " + quality);
+
+                    player.processHit(quality);
+
+                    // Partículas com cor baseada na qualidade
+                    Color particleColor;
+                    if (quality == Player.HitQuality.PERFECT) {
+                        particleColor = Color.GREEN;
+                    } else {  // GOOD
+                        particleColor = Color.YELLOW;
+                    }
+
                     float centerX = note.rect.x + note.rect.width / 2;
                     float centerY = note.rect.y + note.rect.height / 2;
                     spawnParticles(centerX, centerY, particleColor);
+
                     note.hit = true;
                     notes.removeIndex(i);
                     hitSomething = true;
@@ -300,6 +368,7 @@ public class GameScreen implements Screen {
                 }
             }
         }
+
         if (!hitSomething) {
             player.processMiss(false);
         }
@@ -307,12 +376,12 @@ public class GameScreen implements Screen {
 
     @Override
     public void render(float delta) {
-    
+
         updateLogic(delta);
         if (!gameFinished) {
             renderGameOnly();
         }
-      
+
     }
 
     public void renderGameOnly() {
@@ -362,9 +431,9 @@ public class GameScreen implements Screen {
         layout.setText(font, "ESC para Pausar");
         font.draw(batch, layout, V_WIDTH - layout.width - 20f, V_HEIGHT - 20f);
 
-        if (player.isFeedbackActive() && !player.getHitFeedback().isEmpty()) { 
-            font.setColor(player.getFeedbackColor()); 
-            layout.setText(font, player.getHitFeedback()); 
+        if (player.isFeedbackActive() && !player.getHitFeedback().isEmpty()) {
+            font.setColor(player.getFeedbackColor());
+            layout.setText(font, player.getHitFeedback());
             font.draw(batch, layout, (V_WIDTH - layout.width) / 2f, 150);
         }
         batch.end();
@@ -395,7 +464,7 @@ public class GameScreen implements Screen {
             shapeRenderer.setColor(Color.DARK_GRAY);
             shapeRenderer.rect(barX, barY, barWidth, barHeight);
 
-            float progress = player.getMultiplierProgress(); 
+            float progress = player.getMultiplierProgress();
 
             shapeRenderer.setColor(Color.LIME);
             shapeRenderer.rect(barX, barY, barWidth * progress, barHeight);

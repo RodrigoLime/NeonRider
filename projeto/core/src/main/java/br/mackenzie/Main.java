@@ -29,7 +29,6 @@ public class Main extends Game {
     public OrthographicCamera camera;
     public Viewport viewport;
 
-    // --- INÍCIO DA MUDANÇA ---
     // Serviço de janela (injetado pelo Launcher)
     public final WindowService windowService;
 
@@ -39,7 +38,6 @@ public class Main extends Game {
     public Main(WindowService windowService) {
         this.windowService = windowService;
     }
-    // --- FIM DA MUDANÇA ---
 
     @Override
     public void create() {
@@ -47,7 +45,7 @@ public class Main extends Game {
         batch = new SpriteBatch();
         shapeRenderer = new ShapeRenderer();
 
-        // --- Carregamento da Fonte ---
+        // Carregamento da Fonte
         FreeTypeFontGenerator generator = new FreeTypeFontGenerator(Gdx.files.internal("fonts/modern_sans_serif_7.ttf"));
         FreeTypeFontParameter parameter = new FreeTypeFontParameter();
 
@@ -64,7 +62,7 @@ public class Main extends Game {
         for (TextureRegion region : font.getRegions()) {
             region.getTexture().setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
         }
-        
+
         generator.dispose();
         // --- Fim do Carregamento da Fonte ---
 
@@ -102,7 +100,7 @@ public class Main extends Game {
 
     @Override
     public void resize(int width, int height) {
-        // Este método agora é chamado automaticamente pelo LibGDX
+        // Este método é chamado automaticamente pelo LibGDX
         // sempre que a janela muda de tamanho, corrigindo o "piscar"
         viewport.update(width, height, true);
     }
